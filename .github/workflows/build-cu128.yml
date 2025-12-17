@@ -104,6 +104,15 @@ jobs:
       - name: Clone FlexGEMM
         run: git clone https://github.com/JeffreyXiang/FlexGEMM.git --recursive
 
+      - name: Patch for Windows uint typedef
+        shell: powershell
+        run: |
+          $file = "FlexGEMM/flex_gemm/kernels/cuda/spconv/neighbor_map.cu"
+          $content = Get-Content $file -Raw
+          $patch = "typedef unsigned int uint;`n"
+          $content = $patch + $content
+          Set-Content $file $content
+
       - name: Build wheel
         shell: cmd
         run: |
