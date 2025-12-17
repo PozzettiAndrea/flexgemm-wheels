@@ -1,0 +1,275 @@
+name: Build CUDA 12.8 + PyTorch 2.8.0
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+env:
+  CUDA_VERSION: '12.8'
+  CUDA_SHORT: '128'
+  PYTORCH_VERSION: '2.8.0'
+  TORCH_SHORT: '280'
+  TORCH_CUDA_ARCH_LIST: '7.5;8.0;8.6;8.9;9.0;10.0;12.0'
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.10', '3.11', '3.12', '3.13']
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          sudo apt-get clean
+          df -h
+
+      - name: Setup Python ${{ matrix.python }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Install CUDA toolkit
+        run: |
+          wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.1-1_all.deb
+          sudo dpkg -i cuda-keyring_1.1-1_all.deb
+          sudo apt-get update
+          sudo apt-get install -y \
+            cuda-nvcc-12-8 \
+            cuda-cudart-dev-12-8 \
+            libcublas-dev-12-8 \
+            libcusparse-dev-12-8 \
+            libcurand-dev-12-8 \
+            libcufft-dev-12-8 \
+            libcusolver-dev-12-8 \
+            cuda-nvtx-12-8
+          echo "/usr/local/cuda-12.8/bin" >> $GITHUB_PATH
+          echo "CUDA_HOME=/usr/local/cuda-12.8" >> $GITHUB_ENV
+          echo "CUDA_PATH=/usr/local/cuda-12.8" >> $GITHUB_ENV
+
+      - name: Install CUDA PyTorch and build tools
+        run: |
+          pip install --no-cache-dir torch==${{ env.PYTORCH_VERSION }} --index-url https://download.pytorch.org/whl/cu128
+          pip install --no-cache-dir wheel setuptools ninja numpy triton
+
+      - name: Verify setup
+        run: |
+          nvcc --version
+          python -c "import torch; print(f'PyTorch: {torch.__version__}')"
+          echo "CUDA_HOME=$CUDA_HOME"
+
+      - name: Clone and build FlexGEMM
+        run: |
+          export CUDA_HOME=/usr/local/cuda-12.8
+          export CUDA_PATH=/usr/local/cuda-12.8
+          export FORCE_CUDA=1
+          export TORCH_CUDA_ARCH_LIST="${{ env.TORCH_CUDA_ARCH_LIST }}"
+          git config --global url."https://github.com/".insteadOf "git@github.com:"
+          git clone https://github.com/JeffreyXiang/FlexGEMM.git --recursive
+          cd FlexGEMM
+          pip install --no-build-isolation .
+          python setup.py bdist_wheel
+          ls -la dist/
+
+      - name: Upload wheel
+        uses: actions/upload-artifact@v4
+        with:
+          name: flexgemm-linux-cu${{ env.CUDA_SHORT }}-torch${{ env.TORCH_SHORT }}-py${{ matrix.python }}
+          path: FlexGEMM/dist/*.whl
+          retention-days: 7
+
+  build-windows:
+    runs-on: windows-2022
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.10', '3.11', '3.12', '3.13']
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python ${{ matrix.python }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Download CUDA network installer
+        shell: powershell
+        run: |
+          $installerUrl = "https://developer.download.nvidia.com/compute/cuda/12.8.1/network_installers/cuda_12.8.1_windows_network.exe"
+          Write-Host "Downloading CUDA 12.8 network installer..."
+          Invoke-WebRequest -Uri $installerUrl -OutFile "cuda_installer.exe" -UseBasicParsing
+
+      - name: Install CUDA toolkit
+        shell: powershell
+        run: |
+          Write-Host "Installing CUDA toolkit..."
+          Start-Process -FilePath "cuda_installer.exe" -ArgumentList "-s", "-n", "nvcc_12.8", "cudart_12.8", "cusparse_dev_12.8", "cublas_dev_12.8", "curand_dev_12.8", "cufft_dev_12.8", "cusolver_dev_12.8", "thrust_12.8", "nvtx_12.8" -Wait -NoNewWindow
+          $cudaPath = "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8"
+          if (Test-Path "$cudaPath\bin\nvcc.exe") {
+            Write-Host "CUDA installed successfully"
+          } else {
+            Write-Host "WARNING: nvcc.exe not found"
+            Get-ChildItem "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\" -ErrorAction SilentlyContinue
+          }
+          echo "$cudaPath\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          echo "CUDA_HOME=$cudaPath" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          echo "CUDA_PATH=$cudaPath" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Install CUDA PyTorch and build tools
+        shell: bash
+        run: |
+          pip install --no-cache-dir torch==${{ env.PYTORCH_VERSION }} --index-url https://download.pytorch.org/whl/cu128
+          pip install --no-cache-dir wheel setuptools ninja numpy
+
+      - name: Verify setup
+        run: |
+          nvcc --version
+          python -c "import torch; print(f'PyTorch: {torch.__version__}')"
+
+      - name: Clone FlexGEMM
+        run: |
+          git config --global url."https://github.com/".insteadOf "git@github.com:"
+          git clone https://github.com/JeffreyXiang/FlexGEMM.git --recursive
+
+      - name: Patch for Windows uint
+        shell: powershell
+        run: |
+          $file = "FlexGEMM/flex_gemm/kernels/cuda/spconv/neighbor_map.cu"
+          $content = Get-Content $file -Raw
+          $patch = "typedef unsigned int uint;`n"
+          $content = $patch + $content
+          Set-Content $file $content
+
+      - name: Build wheel
+        shell: cmd
+        run: |
+          cd FlexGEMM
+          set "CUDA_HOME=C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8"
+          set "CUDA_PATH=C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8"
+          set FORCE_CUDA=1
+          set TORCH_CUDA_ARCH_LIST=7.5;8.0;8.6;8.9;9.0;10.0;12.0
+          pip install --no-build-isolation .
+          python setup.py bdist_wheel
+          dir dist
+
+      - name: Upload wheel
+        uses: actions/upload-artifact@v4
+        with:
+          name: flexgemm-windows-cu${{ env.CUDA_SHORT }}-torch${{ env.TORCH_SHORT }}-py${{ matrix.python }}
+          path: FlexGEMM/dist/*.whl
+          retention-days: 7
+
+  release:
+    needs: [build-linux, build-windows]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Collect wheels
+        run: |
+          mkdir -p wheels
+          find artifacts -name "*.whl" -exec cp {} wheels/ \;
+          echo "Collected wheels:"
+          ls -la wheels/
+
+      - name: Create or update GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: cu${{ env.CUDA_SHORT }}-torch${{ env.TORCH_SHORT }}
+          name: CUDA ${{ env.CUDA_VERSION }} + PyTorch ${{ env.PYTORCH_VERSION }}
+          body: |
+            Pre-built FlexGEMM wheels for CUDA ${{ env.CUDA_VERSION }} + PyTorch ${{ env.PYTORCH_VERSION }}
+
+            **Install:**
+            ```bash
+            pip install flexgemm \
+              --find-links https://pozzettiandrea.github.io/flexgemm-wheels/cu${{ env.CUDA_SHORT }}-torch${{ env.TORCH_SHORT }}/
+            ```
+
+            **Supported:**
+            - Python: 3.10, 3.11, 3.12, 3.13
+            - Platforms: Linux (x86_64), Windows (amd64)
+            - GPU: RTX 20/30/40/50 series, A100, B100/B200
+          files: wheels/*.whl
+          fail_on_unmatched_files: true
+          make_latest: false
+
+  update-index:
+    needs: [release]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Generate index.html for this release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          WHEEL_DIR="wheels/cu${{ env.CUDA_SHORT }}-torch${{ env.TORCH_SHORT }}"
+          mkdir -p "$WHEEL_DIR"
+
+          RELEASE_TAG="cu${{ env.CUDA_SHORT }}-torch${{ env.TORCH_SHORT }}"
+          REPO="${{ github.repository }}"
+
+          cat > "$WHEEL_DIR/index.html" << 'HEADER'
+          <!DOCTYPE html>
+          <html>
+          <head>
+              <title>FlexGEMM Wheels - CUDA ${{ env.CUDA_VERSION }} + PyTorch ${{ env.PYTORCH_VERSION }}</title>
+              <style>
+                  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }
+                  a { color: #0366d6; }
+                  pre { background: #f6f8fa; padding: 15px; border-radius: 5px; overflow-x: auto; }
+              </style>
+          </head>
+          <body>
+          <h1>FlexGEMM Wheels</h1>
+          <p><strong>CUDA ${{ env.CUDA_VERSION }} + PyTorch ${{ env.PYTORCH_VERSION }}</strong></p>
+          <h2>Install</h2>
+          <pre>pip install flexgemm --find-links https://pozzettiandrea.github.io/flexgemm-wheels/cu${{ env.CUDA_SHORT }}-torch${{ env.TORCH_SHORT }}/</pre>
+          <h2>Available Wheels</h2>
+          HEADER
+
+          gh release view "$RELEASE_TAG" --json assets --jq '.assets[].name' | while read -r wheel; do
+            echo "<a href=\"https://github.com/$REPO/releases/download/$RELEASE_TAG/$wheel\">$wheel</a><br>" >> "$WHEEL_DIR/index.html"
+          done
+
+          cat >> "$WHEEL_DIR/index.html" << 'FOOTER'
+          <p style="margin-top: 20px;"><a href="../">Back to index</a></p>
+          </body>
+          </html>
+          FOOTER
+
+          echo "Generated index.html:"
+          cat "$WHEEL_DIR/index.html"
+
+      - name: Commit index.html
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add wheels/
+          git commit -m "Update index: CUDA ${{ env.CUDA_VERSION }} + PyTorch ${{ env.PYTORCH_VERSION }}" || echo "No changes"
+          git pull --rebase origin main || true
+          git push
