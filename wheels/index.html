@@ -1,14 +1,35 @@
-<!DOCTYPE html><html><body>
-<a href="https://github.com/PozzettiAndrea/flexgemm-wheels/releases/download/cu124/flex_gemm-0.0.1+cu124-cp310-cp310-linux_x86_64.whl#sha256=49c7d94289942f7e2b449d27d19cd9a152de22a1fd42a9d13028ddc9ed854a11">flex_gemm-0.0.1+cu124-cp310-cp310-linux_x86_64.whl</a><br>
-<a href="https://github.com/PozzettiAndrea/flexgemm-wheels/releases/download/cu124/flex_gemm-0.0.1+cu124-cp310-cp310-win_amd64.whl#sha256=3a9ad914db41a76ff0d807ec464121e13a1eac7da9abb3155172f2938b39a8b8">flex_gemm-0.0.1+cu124-cp310-cp310-win_amd64.whl</a><br>
-<a href="https://github.com/PozzettiAndrea/flexgemm-wheels/releases/download/cu124/flex_gemm-0.0.1+cu124-cp311-cp311-linux_x86_64.whl#sha256=eb968074c333f7a8ab735226222b32a7a336f2effa8a7d2ac9f53ea434d0453b">flex_gemm-0.0.1+cu124-cp311-cp311-linux_x86_64.whl</a><br>
-<a href="https://github.com/PozzettiAndrea/flexgemm-wheels/releases/download/cu124/flex_gemm-0.0.1+cu124-cp311-cp311-win_amd64.whl#sha256=5d98bd71284c39bfaaabec57cf48e8ea72017c10007f395ca52582649c69620d">flex_gemm-0.0.1+cu124-cp311-cp311-win_amd64.whl</a><br>
-<a href="https://github.com/PozzettiAndrea/flexgemm-wheels/releases/download/cu124/flex_gemm-0.0.1+cu124-cp312-cp312-linux_x86_64.whl#sha256=b745d9e4b458ae5d1929fecbb250ed35ab0dc17e1b814e55964d40b0384e6fc0">flex_gemm-0.0.1+cu124-cp312-cp312-linux_x86_64.whl</a><br>
-<a href="https://github.com/PozzettiAndrea/flexgemm-wheels/releases/download/cu124/flex_gemm-0.0.1+cu124-cp312-cp312-win_amd64.whl#sha256=96442f12ff18881f61fe76758e8fe1508154b21320934daeac83940ae932fc44">flex_gemm-0.0.1+cu124-cp312-cp312-win_amd64.whl</a><br>
-<a href="https://github.com/PozzettiAndrea/flexgemm-wheels/releases/download/cu128/flex_gemm-0.0.1+cu128-cp310-cp310-linux_x86_64.whl#sha256=e92a7d999f5e47a7e6f9f226de2abbd044ee0a73351a3938ace9da994aeb04e9">flex_gemm-0.0.1+cu128-cp310-cp310-linux_x86_64.whl</a><br>
-<a href="https://github.com/PozzettiAndrea/flexgemm-wheels/releases/download/cu128/flex_gemm-0.0.1+cu128-cp310-cp310-win_amd64.whl#sha256=e9a40f185733b494b08d7420fa253306f00af4d0dc8f0a0129ceee38091d6e53">flex_gemm-0.0.1+cu128-cp310-cp310-win_amd64.whl</a><br>
-<a href="https://github.com/PozzettiAndrea/flexgemm-wheels/releases/download/cu128/flex_gemm-0.0.1+cu128-cp311-cp311-linux_x86_64.whl#sha256=38481ebc7753a781249792891d2cacaec8eb3088c86cebfd51acef3073670e3a">flex_gemm-0.0.1+cu128-cp311-cp311-linux_x86_64.whl</a><br>
-<a href="https://github.com/PozzettiAndrea/flexgemm-wheels/releases/download/cu128/flex_gemm-0.0.1+cu128-cp311-cp311-win_amd64.whl#sha256=809be7d74752c5de7794121e5de041dc63166e8bfd9005b1913a24162422955b">flex_gemm-0.0.1+cu128-cp311-cp311-win_amd64.whl</a><br>
-<a href="https://github.com/PozzettiAndrea/flexgemm-wheels/releases/download/cu128/flex_gemm-0.0.1+cu128-cp312-cp312-linux_x86_64.whl#sha256=5ffe17fb83b379c6b218bb89c12c8ddc0ac1acfd2f66f8c4c3e8cf349904a221">flex_gemm-0.0.1+cu128-cp312-cp312-linux_x86_64.whl</a><br>
-<a href="https://github.com/PozzettiAndrea/flexgemm-wheels/releases/download/cu128/flex_gemm-0.0.1+cu128-cp312-cp312-win_amd64.whl#sha256=e17db4e699acb007900c853099d1e396a881b056763b5354298d7e5de59799e3">flex_gemm-0.0.1+cu128-cp312-cp312-win_amd64.whl</a><br>
-</body></html>
+<!DOCTYPE html>
+<html>
+<head>
+    <title>FlexGEMM Wheels</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }
+        a { color: #0366d6; }
+        pre { background: #f6f8fa; padding: 15px; border-radius: 5px; overflow-x: auto; }
+        ul { line-height: 2; }
+    </style>
+</head>
+<body>
+<h1>FlexGEMM Wheels</h1>
+<p>Pre-built wheels for <a href="https://github.com/JeffreyXiang/FlexGEMM">FlexGEMM</a> - Efficient sparse convolution based on Triton.</p>
+
+<h2>Available Configurations</h2>
+<ul>
+    <li><a href="cu124-torch251/">CUDA 12.4 + PyTorch 2.5.1</a> (Python 3.10-3.12)</li>
+    <li><a href="cu126-torch260/">CUDA 12.6 + PyTorch 2.6.0</a> (Python 3.10-3.13)</li>
+    <li><a href="cu126-torch280/">CUDA 12.6 + PyTorch 2.8.0</a> (Python 3.10-3.13)</li>
+    <li><a href="cu128-torch280/">CUDA 12.8 + PyTorch 2.8.0</a> (Python 3.10-3.13)</li>
+    <li><a href="cu128-torch291/">CUDA 12.8 + PyTorch 2.9.1</a> (Python 3.10-3.13)</li>
+</ul>
+
+<h2>Installation</h2>
+<p>Choose the configuration matching your CUDA and PyTorch versions:</p>
+<pre>pip install flexgemm --find-links https://pozzettiandrea.github.io/flexgemm-wheels/cu128-torch291/</pre>
+
+<h2>Supported GPUs</h2>
+<ul>
+    <li>CUDA 12.4/12.6: RTX 20/30/40 series, A100</li>
+    <li>CUDA 12.8: RTX 20/30/40/50 series, A100, B100/B200</li>
+</ul>
+</body>
+</html>
