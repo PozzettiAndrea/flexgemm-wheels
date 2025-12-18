@@ -1,0 +1,21 @@
+# Don't ignore wheel index files
+!wheels/
+!wheels/index.html
+
+# Ignore actual wheel files (they're in releases)
+*.whl
+
+# Python
+__pycache__/
+*.py[cod]
+.env
+venv/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
