@@ -73,6 +73,7 @@ jobs:
           export CUDA_PATH=/usr/local/cuda-12.8
           export FORCE_CUDA=1
           export TORCH_CUDA_ARCH_LIST="${{ env.TORCH_CUDA_ARCH_LIST }}"
+          export CXXFLAGS="-D_GLIBCXX_USE_CXX11_ABI=1"
           git config --global url."https://github.com/".insteadOf "git@github.com:"
           git clone https://github.com/JeffreyXiang/FlexGEMM.git --recursive
           cd FlexGEMM
