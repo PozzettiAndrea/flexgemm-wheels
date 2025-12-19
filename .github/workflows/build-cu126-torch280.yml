@@ -77,6 +77,8 @@ jobs:
           git config --global url."https://github.com/".insteadOf "git@github.com:"
           git clone https://github.com/JeffreyXiang/FlexGEMM.git --recursive
           cd FlexGEMM
+          # Clean pre-existing wheels from repo to avoid artifact conflicts
+          rm -rf dist/*
           # Patch setup.py to add CXX11 ABI flag (CXXFLAGS env var is not picked up by PyTorch build)
           sed -i 's/"cxx": \["-O3", "-std=c++17"\]/"cxx": ["-O3", "-std=c++17", "-D_GLIBCXX_USE_CXX11_ABI=1"]/' setup.py
           pip install --no-build-isolation .
@@ -143,6 +145,9 @@ jobs:
         run: |
           git config --global url."https://github.com/".insteadOf "git@github.com:"
           git clone https://github.com/JeffreyXiang/FlexGEMM.git --recursive
+
+          # Clean pre-existing wheels from repo to avoid artifact conflicts
+          rm -rf FlexGEMM/dist/*
 
       - name: Patch for Windows uint
         shell: powershell
