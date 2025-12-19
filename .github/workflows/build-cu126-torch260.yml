@@ -142,6 +142,7 @@ jobs:
           python -c "import torch; print(f'PyTorch: {torch.__version__}')"
 
       - name: Clone FlexGEMM
+        shell: bash
         run: |
           git config --global url."https://github.com/".insteadOf "git@github.com:"
           git clone https://github.com/JeffreyXiang/FlexGEMM.git --recursive
