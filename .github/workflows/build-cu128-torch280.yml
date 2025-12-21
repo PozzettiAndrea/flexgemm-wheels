@@ -79,6 +79,8 @@ jobs:
           cd FlexGEMM
           # Clean pre-existing wheels from repo to avoid artifact conflicts
           rm -rf dist/*
+          # Patch pyproject.toml: make triton conditional for Windows compatibility
+          sed -i 's/"triton>=3.2.0"/"triton>=3.2.0; platform_system != '\''Windows'\''", "triton-windows>=3.2.0; platform_system == '\''Windows'\''"/g' pyproject.toml
           # Patch setup.py to add CXX11 ABI flag (CXXFLAGS env var is not picked up by PyTorch build)
           sed -i 's/"cxx": \["-O3", "-std=c++17"\]/"cxx": ["-O3", "-std=c++17", "-D_GLIBCXX_USE_CXX11_ABI=1"]/' setup.py
           pip install --no-build-isolation .
@@ -148,6 +150,12 @@ jobs:
           git clone https://github.com/JeffreyXiang/FlexGEMM.git --recursive
           # Clean pre-existing wheels from repo to avoid artifact conflicts
           rm -rf FlexGEMM/dist/*
+
+      - name: Patch pyproject.toml for triton-windows
+        shell: bash
+        run: |
+          cd FlexGEMM
+          sed -i 's/"triton>=3.2.0"/"triton>=3.2.0; platform_system != '\''Windows'\''", "triton-windows>=3.2.0; platform_system == '\''Windows'\''"/g' pyproject.toml
 
       - name: Patch for Windows uint
         shell: powershell
