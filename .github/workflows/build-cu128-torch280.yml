@@ -3,6 +3,8 @@ name: Build CUDA 12.8 + PyTorch 2.8.0
 on:
   push:
     branches: [main]
+    paths:
+      - '.github/workflows/build-cu128-torch280.yml'
     tags: ['v*']
   workflow_dispatch:
 
