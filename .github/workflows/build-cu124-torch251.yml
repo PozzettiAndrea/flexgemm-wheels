@@ -11,6 +11,7 @@ env:
   CUDA_SHORT: '124'
   PYTORCH_VERSION: '2.5.1'
   TORCH_SHORT: '251'
+  TORCH_MM: '25'
   TORCH_CUDA_ARCH_LIST: '7.5;8.0;8.6;8.9;9.0'
 
 jobs:
@@ -85,6 +86,8 @@ jobs:
           sed -i 's/"cxx": \["-O3", "-std=c++17"\]/"cxx": ["-O3", "-std=c++17", "-D_GLIBCXX_USE_CXX11_ABI=1"]/' setup.py
           pip install --no-build-isolation .
           python setup.py bdist_wheel
+          # Rename wheel with CUDA+PyTorch suffix
+          cd dist && for f in *.whl; do mv "$f" "$(echo $f | sed 's/-cp/+cu${{ env.CUDA_SHORT }}torch${{ env.TORCH_MM }}-cp/')"; done && cd ..
           ls -la dist/
 
       - name: Upload wheel
@@ -178,6 +181,16 @@ jobs:
           pip install --no-build-isolation .
           python setup.py bdist_wheel
           dir dist
+
+      - name: Rename wheel with CUDA+PyTorch suffix
+        shell: powershell
+        run: |
+          cd FlexGEMM\dist
+          Get-ChildItem *.whl | ForEach-Object {
+            $newname = $_.Name -replace '-cp', '+cu${{ env.CUDA_SHORT }}torch${{ env.TORCH_MM }}-cp'
+            Rename-Item $_.FullName $newname
+          }
+          Get-ChildItem
 
       - name: Upload wheel
         uses: actions/upload-artifact@v4

@@ -1,4 +1,4 @@
-name: Build CUDA 12.6 + PyTorch 2.8.0
+name: Build CUDA 13.0 + PyTorch 2.9.1
 
 on:
   push:
@@ -7,12 +7,12 @@ on:
   workflow_dispatch:
 
 env:
-  CUDA_VERSION: '12.6'
-  CUDA_SHORT: '126'
-  PYTORCH_VERSION: '2.8.0'
-  TORCH_SHORT: '280'
-  TORCH_MM: '28'
-  TORCH_CUDA_ARCH_LIST: '7.5;8.0;8.6;8.9;9.0'
+  CUDA_VERSION: '13.0'
+  CUDA_SHORT: '130'
+  PYTORCH_VERSION: '2.9.1'
+  TORCH_SHORT: '291'
+  TORCH_MM: '29'
+  TORCH_CUDA_ARCH_LIST: '7.5;8.0;8.6;8.9;9.0;10.0;12.0'
 
 jobs:
   build-linux:
@@ -45,22 +45,22 @@ jobs:
           sudo dpkg -i cuda-keyring_1.1-1_all.deb
           sudo apt-get update
           sudo apt-get install -y \
-            cuda-nvcc-12-6 \
-            cuda-cudart-dev-12-6 \
-            libcublas-dev-12-6 \
-            libcusparse-dev-12-6 \
-            libcurand-dev-12-6 \
-            libcufft-dev-12-6 \
-            libcusolver-dev-12-6 \
-            cuda-nvtx-12-6
-          echo "/usr/local/cuda-12.6/bin" >> $GITHUB_PATH
-          echo "CUDA_HOME=/usr/local/cuda-12.6" >> $GITHUB_ENV
-          echo "CUDA_PATH=/usr/local/cuda-12.6" >> $GITHUB_ENV
+            cuda-nvcc-13-0 \
+            cuda-cudart-dev-13-0 \
+            libcublas-dev-13-0 \
+            libcusparse-dev-13-0 \
+            libcurand-dev-13-0 \
+            libcufft-dev-13-0 \
+            libcusolver-dev-13-0 \
+            cuda-nvtx-13-0
+          echo "/usr/local/cuda-13.0/bin" >> $GITHUB_PATH
+          echo "CUDA_HOME=/usr/local/cuda-13.0" >> $GITHUB_ENV
+          echo "CUDA_PATH=/usr/local/cuda-13.0" >> $GITHUB_ENV
 
       - name: Install CUDA PyTorch and build tools
         run: |
-          pip install --no-cache-dir torch==${{ env.PYTORCH_VERSION }} --index-url https://download.pytorch.org/whl/cu126
-          pip install wheel setuptools ninja numpy triton
+          pip install --no-cache-dir torch==${{ env.PYTORCH_VERSION }} --index-url https://download.pytorch.org/whl/cu130
+          pip install --no-cache-dir wheel setuptools ninja numpy triton
 
       - name: Verify setup
         run: |
@@ -70,8 +70,8 @@ jobs:
 
       - name: Clone and build FlexGEMM
         run: |
-          export CUDA_HOME=/usr/local/cuda-12.6
-          export CUDA_PATH=/usr/local/cuda-12.6
+          export CUDA_HOME=/usr/local/cuda-13.0
+          export CUDA_PATH=/usr/local/cuda-13.0
           export FORCE_CUDA=1
           export TORCH_CUDA_ARCH_LIST="${{ env.TORCH_CUDA_ARCH_LIST }}"
           export CXXFLAGS="-D_GLIBCXX_USE_CXX11_ABI=1"
@@ -115,16 +115,16 @@ jobs:
       - name: Download CUDA network installer
         shell: powershell
         run: |
-          $installerUrl = "https://developer.download.nvidia.com/compute/cuda/12.6.3/network_installers/cuda_12.6.3_windows_network.exe"
-          Write-Host "Downloading CUDA 12.6 network installer..."
+          $installerUrl = "https://developer.download.nvidia.com/compute/cuda/13.0.0/network_installers/cuda_13.0.0_windows_network.exe"
+          Write-Host "Downloading CUDA 13.0 network installer..."
           Invoke-WebRequest -Uri $installerUrl -OutFile "cuda_installer.exe" -UseBasicParsing
 
       - name: Install CUDA toolkit
         shell: powershell
         run: |
           Write-Host "Installing CUDA toolkit..."
-          Start-Process -FilePath "cuda_installer.exe" -ArgumentList "-s", "-n", "nvcc_12.6", "cudart_12.6", "cusparse_dev_12.6", "cublas_dev_12.6", "curand_dev_12.6", "cufft_dev_12.6", "cusolver_dev_12.6", "thrust_12.6", "nvtx_12.6" -Wait -NoNewWindow
-          $cudaPath = "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6"
+          Start-Process -FilePath "cuda_installer.exe" -ArgumentList "-s", "-n", "nvcc_13.0", "cudart_13.0", "cusparse_dev_13.0", "cublas_dev_13.0", "curand_dev_13.0", "cufft_dev_13.0", "cusolver_dev_13.0", "thrust_13.0", "nvtx_13.0" -Wait -NoNewWindow
+          $cudaPath = "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v13.0"
           if (Test-Path "$cudaPath\bin\nvcc.exe") {
             Write-Host "CUDA installed successfully"
           } else {
@@ -138,8 +138,23 @@ jobs:
       - name: Install CUDA PyTorch and build tools
         shell: bash
         run: |
-          pip install torch==${{ env.PYTORCH_VERSION }} --index-url https://download.pytorch.org/whl/cu126
-          pip install wheel setuptools ninja numpy
+          pip install --no-cache-dir torch==${{ env.PYTORCH_VERSION }} --index-url https://download.pytorch.org/whl/cu130
+          pip install --no-cache-dir wheel setuptools ninja numpy
+
+      - name: Patch PyTorch header for Windows MSVC bug
+        shell: bash
+        run: |
+          # Fix for https://github.com/pytorch/pytorch/issues/166123
+          TORCH_PATH=$(python -c "import torch; print(torch.__path__[0])")
+          HEADER_FILE="$TORCH_PATH/include/torch/csrc/dynamo/compiled_autograd.h"
+          if [ -f "$HEADER_FILE" ]; then
+            echo "Patching $HEADER_FILE for MSVC std:: ambiguity bug"
+            sed -i 's/} else if constexpr (::std::is_same_v<T, ::std::string>) {/\/\/ PATCHED: } else if constexpr (::std::is_same_v<T, ::std::string>) {/' "$HEADER_FILE"
+            sed -i 's/return at::StringType::get();/\/\/ PATCHED: return at::StringType::get();/' "$HEADER_FILE"
+            echo "Patch applied successfully"
+          else
+            echo "Warning: Header file not found at $HEADER_FILE"
+          fi
 
       - name: Verify setup
         run: |
@@ -174,10 +189,10 @@ jobs:
         shell: cmd
         run: |
           cd FlexGEMM
-          set "CUDA_HOME=C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6"
-          set "CUDA_PATH=C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6"
+          set "CUDA_HOME=C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v13.0"
+          set "CUDA_PATH=C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v13.0"
           set FORCE_CUDA=1
-          set TORCH_CUDA_ARCH_LIST=7.5;8.0;8.6;8.9;9.0
+          set TORCH_CUDA_ARCH_LIST=7.5;8.0;8.6;8.9;9.0;10.0;12.0
           pip install --no-build-isolation .
           python setup.py bdist_wheel
           dir dist
@@ -243,7 +258,7 @@ jobs:
             **Supported:**
             - Python: 3.10, 3.11, 3.12, 3.13
             - Platforms: Linux (x86_64), Windows (amd64)
-            - GPU: RTX 20/30/40 series, A100
+            - GPU: RTX 20/30/40/50 series, A100, B100/B200
           files: wheels/*.whl
           fail_on_unmatched_files: true
           make_latest: false
