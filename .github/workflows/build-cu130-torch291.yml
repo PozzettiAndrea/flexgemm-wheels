@@ -126,8 +126,8 @@ jobs:
         shell: powershell
         run: |
           Write-Host "Installing CUDA toolkit..."
-          # crt_13.0 provides crt/host_config.h required for CUDA compilation
-          Start-Process -FilePath "cuda_installer.exe" -ArgumentList "-s", "-n", "nvcc_13.0", "crt_13.0", "cudart_13.0", "cusparse_dev_13.0", "cublas_dev_13.0", "curand_dev_13.0", "cufft_dev_13.0", "cusolver_dev_13.0", "thrust_13.0", "nvtx_13.0" -Wait -NoNewWindow
+          # crt_13.0 provides crt/host_config.h, cccl_13.0 provides CUB library
+          Start-Process -FilePath "cuda_installer.exe" -ArgumentList "-s", "-n", "nvcc_13.0", "crt_13.0", "cccl_13.0", "cudart_13.0", "cusparse_dev_13.0", "cublas_dev_13.0", "curand_dev_13.0", "cufft_dev_13.0", "cusolver_dev_13.0", "thrust_13.0", "nvtx_13.0" -Wait -NoNewWindow
           $cudaPath = "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v13.0"
           if (Test-Path "$cudaPath\bin\nvcc.exe") {
             Write-Host "CUDA installed successfully"
