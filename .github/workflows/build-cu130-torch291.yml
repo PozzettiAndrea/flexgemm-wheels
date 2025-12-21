@@ -114,35 +114,26 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
 
-      - name: Download CUDA local installer
+      - name: Download CUDA network installer
         shell: powershell
         run: |
-          $installerUrl = "https://developer.download.nvidia.com/compute/cuda/13.0.0/local_installers/cuda_13.0.0_576.02_windows.exe"
-          Write-Host "Downloading CUDA 13.0 local installer (~3GB)..."
+          $installerUrl = "https://developer.download.nvidia.com/compute/cuda/13.0.0/network_installers/cuda_13.0.0_windows_network.exe"
+          Write-Host "Downloading CUDA 13.0 network installer..."
           Invoke-WebRequest -Uri $installerUrl -OutFile "cuda_installer.exe" -UseBasicParsing
-          Write-Host "Download complete"
+          Write-Host "Download complete, size: $((Get-Item cuda_installer.exe).Length) bytes"
 
       - name: Install CUDA toolkit
         shell: powershell
         run: |
           Write-Host "Installing CUDA toolkit..."
-          # Use local installer with specific components
-          Start-Process -FilePath "cuda_installer.exe" -ArgumentList "-s", "nvcc_13.0", "cudart_13.0", "visual_studio_integration_13.0", "cusparse_13.0", "cusparse_dev_13.0", "cublas_13.0", "cublas_dev_13.0", "curand_13.0", "curand_dev_13.0", "cufft_13.0", "cufft_dev_13.0", "cusolver_13.0", "cusolver_dev_13.0", "thrust_13.0", "nvtx_13.0" -Wait -NoNewWindow
+          # Match cu128 pattern exactly - no visual_studio_integration
+          Start-Process -FilePath "cuda_installer.exe" -ArgumentList "-s", "-n", "nvcc_13.0", "cudart_13.0", "cusparse_dev_13.0", "cublas_dev_13.0", "curand_dev_13.0", "cufft_dev_13.0", "cusolver_dev_13.0", "thrust_13.0", "nvtx_13.0" -Wait -NoNewWindow
           $cudaPath = "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v13.0"
           if (Test-Path "$cudaPath\bin\nvcc.exe") {
             Write-Host "CUDA installed successfully"
           } else {
             Write-Host "WARNING: nvcc.exe not found"
             Get-ChildItem "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\" -ErrorAction SilentlyContinue
-          }
-          # Verify crt/host_config.h exists
-          $crtPath = "$cudaPath\include\crt\host_config.h"
-          if (Test-Path $crtPath) {
-            Write-Host "crt/host_config.h found at $crtPath"
-          } else {
-            Write-Host "WARNING: crt/host_config.h NOT found!"
-            Write-Host "Contents of include dir:"
-            Get-ChildItem "$cudaPath\include" -ErrorAction SilentlyContinue
           }
           echo "$cudaPath\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
           echo "CUDA_HOME=$cudaPath" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
