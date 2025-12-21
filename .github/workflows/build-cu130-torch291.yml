@@ -139,6 +139,16 @@ jobs:
           echo "CUDA_HOME=$cudaPath" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           echo "CUDA_PATH=$cudaPath" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
+      - name: Symlink CCCL headers for CUDA 13.0
+        shell: cmd
+        run: |
+          REM CUDA 13.0 moved CUB/Thrust to include\cccl\ - create symlinks for compatibility
+          cd "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v13.0\include"
+          if exist cccl\cub mklink /D cub cccl\cub
+          if exist cccl\thrust mklink /D thrust cccl\thrust
+          if exist cccl\cuda mklink /D cuda\std cccl\cuda\std
+          dir
+
       - name: Install CUDA PyTorch and build tools
         shell: bash
         run: |
@@ -197,8 +207,6 @@ jobs:
           set "CUDA_PATH=C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v13.0"
           set FORCE_CUDA=1
           set TORCH_CUDA_ARCH_LIST=7.5;8.0;8.6;8.9;9.0;10.0;12.0
-          REM CUDA 13.0 moved CUB/Thrust headers to include\cccl\ subdirectory
-          set "INCLUDE=%CUDA_HOME%\include\cccl;%INCLUDE%"
           pip install --no-build-isolation .
           python setup.py bdist_wheel
           dir dist
