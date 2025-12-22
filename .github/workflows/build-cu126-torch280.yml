@@ -239,7 +239,7 @@ jobs:
 
             **Install:**
             ```bash
-            pip install flexgemm \
+            pip install flex_gemm \
               --find-links https://pozzettiandrea.github.io/flexgemm-wheels/cu${{ env.CUDA_SHORT }}-torch${{ env.TORCH_SHORT }}/
             ```
 
@@ -287,7 +287,7 @@ jobs:
           <h1>FlexGEMM Wheels</h1>
           <p><strong>CUDA ${{ env.CUDA_VERSION }} + PyTorch ${{ env.PYTORCH_VERSION }}</strong></p>
           <h2>Install</h2>
-          <pre>pip install flexgemm --find-links https://pozzettiandrea.github.io/flexgemm-wheels/cu${{ env.CUDA_SHORT }}-torch${{ env.TORCH_SHORT }}/</pre>
+          <pre>pip install flex_gemm --find-links https://pozzettiandrea.github.io/flexgemm-wheels/cu${{ env.CUDA_SHORT }}-torch${{ env.TORCH_SHORT }}/</pre>
           <h2>Available Wheels</h2>
           HEADER
 
