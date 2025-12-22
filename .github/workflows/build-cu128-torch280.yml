@@ -188,7 +188,8 @@ jobs:
         run: |
           cd FlexGEMM\dist
           Get-ChildItem *.whl | ForEach-Object {
-            $newname = $_.Name -replace '-cp', '+cu${{ env.CUDA_SHORT }}torch${{ env.TORCH_MM }}-cp'
+            # Only replace the first -cp (after version), not the second one (ABI tag)
+            $newname = $_.Name -replace '^([^-]+-\d+\.\d+\.\d+)-cp', '$1+cu${{ env.CUDA_SHORT }}torch${{ env.TORCH_MM }}-cp'
             Rename-Item $_.FullName $newname
           }
           Get-ChildItem
