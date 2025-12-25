@@ -171,6 +171,34 @@ jobs:
           $content = $patch + $content
           Set-Content $file $content
 
+      - name: Patch setup.py for debug symbols
+        shell: bash
+        run: |
+          cd FlexGEMM
+          python << 'PATCH_SCRIPT'
+          with open('setup.py', 'r') as f:
+              content = f.read()
+
+          # Replace the extra_compile_args to add MSVC debug flags
+          old_args = """extra_compile_args={
+                "cxx": ["-O3", "-std=c++17"],
+                "nvcc": ["-O3","-std=c++17"] + cc_flag,
+            }"""
+
+          new_args = """extra_compile_args={
+                "cxx": ["/O2", "/Zi", "/std:c++17", "/EHsc"],  # MSVC flags with debug symbols
+                "nvcc": ["-O3","-std=c++17", "-Xcompiler", "/Zi"] + cc_flag,
+            },
+            extra_link_args=["/DEBUG:FULL"]  # Embed debug info reference in .pyd"""
+
+          content = content.replace(old_args, new_args)
+
+          with open('setup.py', 'w') as f:
+              f.write(content)
+
+          print("Patched setup.py for MSVC debug symbols")
+          PATCH_SCRIPT
+
       - name: Build wheel
         shell: cmd
         run: |
