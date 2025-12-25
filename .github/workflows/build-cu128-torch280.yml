@@ -179,19 +179,23 @@ jobs:
           with open('setup.py', 'r') as f:
               content = f.read()
 
-          # Replace the extra_compile_args to add MSVC debug flags
-          old_args = """extra_compile_args={
-                "cxx": ["-O3", "-std=c++17"],
-                "nvcc": ["-O3","-std=c++17"] + cc_flag,
-            }"""
+          # Replace cxx compile args for MSVC with debug symbols (line-by-line, indentation-agnostic)
+          content = content.replace(
+              '"cxx": ["-O3", "-std=c++17"]',
+              '"cxx": ["/O2", "/Zi", "/std:c++17", "/EHsc"]'
+          )
 
-          new_args = """extra_compile_args={
-                "cxx": ["/O2", "/Zi", "/std:c++17", "/EHsc"],  # MSVC flags with debug symbols
-                "nvcc": ["-O3","-std=c++17", "-Xcompiler", "/Zi"] + cc_flag,
-            },
-            extra_link_args=["/DEBUG:FULL"]  # Embed debug info reference in .pyd"""
+          # Add -Xcompiler /Zi to nvcc args
+          content = content.replace(
+              '"nvcc": ["-O3","-std=c++17"] + cc_flag,',
+              '"nvcc": ["-O3","-std=c++17", "-Xcompiler", "/Zi"] + cc_flag,'
+          )
 
-          content = content.replace(old_args, new_args)
+          # Add extra_link_args for debug info (match the closing of extra_compile_args)
+          content = content.replace(
+              '+ cc_flag,\n            }',
+              '+ cc_flag,\n            },\n            extra_link_args=["/DEBUG:FULL"]'
+          )
 
           with open('setup.py', 'w') as f:
               f.write(content)
